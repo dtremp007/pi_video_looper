@@ -2,7 +2,7 @@ import os
 import re
 import urllib.parse
 
-from model import Playlist, Movie
+from .model import Playlist, Movie
 
 
 def build_playlist_m3u(playlist_path: str):
