@@ -8,4 +8,6 @@ setup(name              = 'Adafruit_Video_Looper',
       license           = 'GNU GPLv2',
       url               = 'https://github.com/adafruit/pi_video_looper',
       install_requires  = ['pyudev>=0.23.1', 'pygame', 'six>=1.16.0', 'flask'],
-      packages          = find_packages())
+      packages          = find_packages(),
+      include_package_data = True,
+      )
