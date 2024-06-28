@@ -19,6 +19,7 @@ import RPi.GPIO as GPIO
 from .alsa_config import parse_hw_device
 from .model import Playlist, Movie
 from .playlist_builders import build_playlist_m3u
+from web_server import run_flask
 
 # Basic video looper architecure:
 #
@@ -116,7 +117,7 @@ class VideoLooper:
         if self._keyboard_control:
             self._keyboard_thread = threading.Thread(target=self._handle_keyboard_shortcuts, daemon=True)
             self._keyboard_thread.start()
-        
+
         pinMapSetting = self._config.get('control', 'gpio_pin_map', raw=True)
         if pinMapSetting:
             try:
@@ -181,7 +182,7 @@ class VideoLooper:
 
     def _is_number(self, s):
         try:
-            float(s) 
+            float(s)
             return True
         except ValueError:
             return False
@@ -200,10 +201,10 @@ class VideoLooper:
                         #raise RuntimeError('Playlist path {0} does not exist.'.format(playlist_path))
                 else:
                     paths = self._reader.search_paths()
-                    
+
                     if not paths:
                         return Playlist([])
-                    
+
                     for path in paths:
                         maybe_playlist_path = os.path.join(path, playlist_path)
                         if os.path.isfile(maybe_playlist_path):
@@ -258,7 +259,7 @@ class VideoLooper:
                     with open(alsa_hw_vol_file_path, 'r') as alsa_hw_vol_file:
                         alsa_hw_vol_string = alsa_hw_vol_file.readline()
                         self._alsa_hw_vol = alsa_hw_vol_string
-                    
+
             # Get the video volume from the file in the usb key
             if self._sound_vol_file:
                 sound_vol_file_path = '{0}/{1}'.format(path.rstrip('/'), self._sound_vol_file)
@@ -291,7 +292,7 @@ class VideoLooper:
         message if the on screen display is enabled.
         """
         # Print message to console with number of media files in playlist.
-        message = 'Found {0} media file{1}.'.format(playlist.length(), 
+        message = 'Found {0} media file{1}.'.format(playlist.length(),
             's' if playlist.length() >= 2 else '')
         self._print(message)
         # Do nothing else if the OSD is turned off.
@@ -425,7 +426,7 @@ class VideoLooper:
                 cmd.extend(('-c', str(self._alsa_hw_device[0])))
             cmd.extend(('set', self._alsa_hw_vol_control, '--', self._alsa_hw_vol))
             subprocess.check_call(cmd)
-            
+
     def _handle_keyboard_shortcuts(self):
         while self._running:
             event = pygame.event.wait()
@@ -465,32 +466,32 @@ class VideoLooper:
                 if event.key == pygame.K_i:
                     self._print("i was pressed. previous chapter...")
                     self._player.sendKey("i")
-    
+
     def _handle_gpio_control(self, pin):
         if self._pinMap == None:
             return
-        
+
         action = self._pinMap[str(pin)]
 
         self._print(f'pin {pin} triggered: {action}')
-        
+
         if action in ['K_ESCAPE', 'K_k', 'K_s', 'K_SPACE', 'K_p', 'K_b', 'K_o', 'K_i']:
             pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=getattr(pygame, action, None)))
         else:
             self._playlist.set_next(action)
             self._player.stop(3)
             self._playbackStopped = False
-    
+
     def _gpio_setup(self):
         if self._pinMap == None:
             return
         GPIO.setmode(GPIO.BOARD)
         for pin in self._pinMap:
             GPIO.setup(int(pin), GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            GPIO.add_event_detect(int(pin), GPIO.FALLING, callback=self._handle_gpio_control,  bouncetime=200) 
+            GPIO.add_event_detect(int(pin), GPIO.FALLING, callback=self._handle_gpio_control,  bouncetime=200)
             self._print("pin {} action set to: {}".format(pin, self._pinMap[pin]))
 
-        
+
     def run(self):
         """Main program loop.  Will never return!"""
         # Get playlist of movies to play from file reader.
@@ -536,7 +537,7 @@ class VideoLooper:
                     if self._one_shot_playback:
                         self._playbackStopped = True
                         player_loop = None
-                        
+
                     # Start playing the first available movie.
                     self._print('Playing movie: {0} {1}'.format(movie, infotext))
                     # todo: maybe clear screen to black so that background (image/color) is not visible for videos with a resolution that is < screen resolution
@@ -546,7 +547,7 @@ class VideoLooper:
             # and rebuild the playlist.
             if self._reader.is_changed() and not self._playbackStopped:
                 self._print("reader changed, stopping player")
-                self._player.stop(3)  # Up to 3 second delay waiting for old 
+                self._player.stop(3)  # Up to 3 second delay waiting for old
                                       # player to stop.
                 self._print("player stopped")
                 # Rebuild playlist and show countdown again (if OSD enabled).
@@ -561,7 +562,7 @@ class VideoLooper:
             # Give the CPU some time to do other tasks. low values increase "responsiveness to changes" and reduce the pause between files
             # but increase CPU usage
             # since keyboard commands are handled in a seperate thread this sleeptime mostly influences the pause between files
-                        
+
             time.sleep(0.002)
 
         self._print("run ended")
@@ -603,5 +604,10 @@ if __name__ == '__main__':
     # Configure signal handlers to quit on TERM or INT signal.
     signal.signal(signal.SIGTERM, videolooper.signal_quit)
     signal.signal(signal.SIGINT, videolooper.signal_quit)
+
+    # Start Flask in a separate thread
+    flask_thread = threading.Thread(target=run_flask, args=(videolooper,))
+    flask_thread.start()
+
     # Run the main loop.
     videolooper.run()

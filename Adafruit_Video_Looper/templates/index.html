@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Looper Control</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <h1>Video Looper Control</h1>
+    <button onclick="control('play')">Play</button>
+    <button onclick="control('pause')">Pause</button>
+    <button onclick="control('stop')">Stop</button>
+    <button onclick="control('next')">Next</button>
+    <br><br>
+    <input type="text" id="videoPath" placeholder="Enter video path">
+    <button onclick="queueVideo()">Queue Video</button>
+
+    <script>
+        function control(action) {
+            $.get('/' + action, function(data) {
+                alert(data.status);
+            });
+        }
+
+        function queueVideo() {
+            var path = $('#videoPath').val();
+            $.ajax({
+                url: '/queue',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({path: path}),
+                success: function(response) {
+                    alert(response.status);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

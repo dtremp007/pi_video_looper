@@ -39,7 +39,7 @@ cd "$(dirname "$0")"
 
 mkdir -p /mnt/usbdrive0 # This is very important if you put your system in readonly after
 mkdir -p /home/pi/video # create default video directory
-chown pi:pi /home/pi/video
+chown david:david /home/pi/video
 
 pip3 install setuptools
 python3 setup.py install --force
