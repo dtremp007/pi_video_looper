@@ -10,7 +10,4 @@ setup(name              = 'Adafruit_Video_Looper',
       install_requires  = ['pyudev>=0.23.1', 'pygame', 'six>=1.16.0', 'flask'],
       packages          = find_packages(),
       include_package_data = True,
-      package_data={
-        'Adafruit_Video_Looper': ['templates/*.html'],
-     },
       )
