@@ -19,7 +19,7 @@ import RPi.GPIO as GPIO
 from .alsa_config import parse_hw_device
 from .model import Playlist, Movie
 from .playlist_builders import build_playlist_m3u
-from web_server import run_flask
+from .web_server import run_flask
 
 # Basic video looper architecure:
 #
