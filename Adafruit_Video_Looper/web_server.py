@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from werkzeug.utils import secure_filename
-from Adafruit_Video_Looper.model import Movie
+from Adafruit_Video_Looper.model import Movie, Playlist
 import os
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
@@ -58,10 +58,25 @@ def upload_file():
             return redirect(request.url)
         if file:
             filename = secure_filename(file.filename)
-            file.save(os.path.join(USB_DRIVE_PATH, filename))
-            video_path = os.path.join(USB_DRIVE_PATH, filename)
-            video_looper._playlist.add(Movie(video_path, filename, 1))
-            return redirect(url_for('index'))
+            file_path = os.path.join(USB_DRIVE_PATH, filename)
+            try:
+                # Save the file to the USB drive
+                file.save(file_path)
+
+                # Get the current list of movies
+                current_movies = video_looper._playlist._movies
+
+                # Add the new movie to the list
+                new_movie = Movie(file_path, filename, 1)
+                current_movies.append(new_movie)
+
+                # Recreate the playlist with the updated list of movies
+                video_looper._playlist = Playlist(current_movies)
+
+                return redirect(url_for('index'))
+            except Exception as e:
+                app.logger.error(f"Error saving file: {e}")
+                return jsonify({"status": "error", "message": str(e)}), 500
     return '''
     <!doctype html>
     <title>Upload new Video</title>
