@@ -7,6 +7,9 @@ app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 't
 # This will be set from the main script
 video_looper = None
 
+# USB drive mount path from video_looper.ini
+USB_DRIVE_PATH = '/mnt/usbdrive'
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -41,6 +44,32 @@ def queue_video():
     video_path = request.json['path']
     video_looper._playlist.add(Movie(video_path, os.path.basename(video_path), 1))
     return jsonify({"status": "video queued"})
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        # Check if the post request has the file part
+        if 'file' not in request.files:
+            return redirect(request.url)
+        file = request.files['file']
+        # If the user does not select a file, the browser submits an empty file without a filename
+        if file.filename == '':
+            return redirect(request.url)
+        if file:
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(USB_DRIVE_PATH, filename))
+            video_path = os.path.join(USB_DRIVE_PATH, filename)
+            video_looper._playlist.add(Movie(video_path, filename, 1))
+            return redirect(url_for('index'))
+    return '''
+    <!doctype html>
+    <title>Upload new Video</title>
+    <h1>Upload new Video</h1>
+    <form method=post enctype=multipart/form-data>
+      <input type=file name=file>
+      <input type=submit value=Upload>
+    </form>
+    '''
 
 def run_flask(looper, host='0.0.0.0', port=5000):
     global video_looper
