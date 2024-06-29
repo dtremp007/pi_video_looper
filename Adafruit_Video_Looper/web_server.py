@@ -9,7 +9,7 @@ app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 't
 video_looper = None
 
 # USB drive mount path from video_looper.ini
-USB_DRIVE_PATH = '/mnt/usbdrive'
+USB_DRIVE_PATH = '/mnt/usbdrive0'
 
 @app.route('/')
 def index():
