@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify
 from Adafruit_Video_Looper.model import Movie
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
 
 # This will be set from the main script
 video_looper = None
@@ -14,6 +14,9 @@ def index():
 @app.route('/play')
 def play():
     video_looper._playbackStopped = False
+    movie = video_looper._playlist.get_next(video_looper._is_random, video_looper._resume_playlist)
+    if movie:
+        video_looper._player.play(movie)
     return jsonify({"status": "playing"})
 
 @app.route('/pause')
