@@ -1,52 +1,72 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
-from Adafruit_Video_Looper.model import Movie, Playlist
+from dummy_video_looper import DummyVideoLooper
+from model import Movie, Playlist
 import os
 
-app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
+app = Flask(__name__, template_folder=os.path.join(
+    os.path.dirname(__file__), 'templates'),
+    static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
 # This will be set from the main script
 video_looper = None
 
-# USB drive mount path from video_looper.ini
-USB_DRIVE_PATH = '/mnt/usbdrive0'
 
-@app.route('/')
+def get_first_available_usb_drive():
+    if video_looper and video_looper._reader:
+        usb_paths = video_looper._reader._mounter.search_paths()
+        if usb_paths:
+            return usb_paths[0]
+    return None
+
+
+@ app.route('/')
 def index():
-    return render_template('index.html')
+    return send_from_directory(app.static_folder, 'index.html')
 
-@app.route('/play')
+@ app.route('/<path:path>')
+def send_static(path):
+    return send_from_directory(app.static_folder, path)
+
+@ app.route('/api/play')
 def play():
     video_looper._playbackStopped = False
-    movie = video_looper._playlist.get_next(video_looper._is_random, video_looper._resume_playlist)
+    movie = video_looper._playlist.get_next(
+        video_looper._is_random, video_looper._resume_playlist)
     if movie:
         video_looper._player.play(movie)
     return jsonify({"status": "playing"})
 
-@app.route('/pause')
+
+@ app.route('/api/pause')
 def pause():
     video_looper._player.pause()
     return jsonify({"status": "paused"})
 
-@app.route('/stop')
+
+@ app.route('/api/stop')
 def stop():
     video_looper._playbackStopped = True
     video_looper._player.stop(3)
     return jsonify({"status": "stopped"})
 
-@app.route('/next')
+
+@ app.route('/api/next')
 def next_video():
     video_looper._playlist.seek(1)
     video_looper._player.stop(3)
     return jsonify({"status": "next video"})
 
-@app.route('/queue', methods=['POST'])
+
+@ app.route('/api/queue', methods=['POST'])
 def queue_video():
     video_path = request.json['path']
-    video_looper._playlist.add(Movie(video_path, os.path.basename(video_path), 1))
+    video_looper._playlist.add(
+        Movie(video_path, os.path.basename(video_path), 1))
     return jsonify({"status": "video queued"})
 
-@app.route('/upload', methods=['GET', 'POST'])
+
+@ app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         # Check if the post request has the file part
@@ -58,7 +78,11 @@ def upload_file():
             return redirect(request.url)
         if file:
             filename = secure_filename(file.filename)
-            file_path = os.path.join(USB_DRIVE_PATH, filename)
+            usb_drive_path = get_first_available_usb_drive()
+            if not usb_drive_path:
+                return jsonify({"status": "error", "message": "No USB drive found"}), 500
+
+            file_path = os.path.join(usb_drive_path, filename)
             try:
                 # Save the file to the USB drive
                 file.save(file_path)
@@ -87,7 +111,14 @@ def upload_file():
     </form>
     '''
 
+
 def run_flask(looper, host='0.0.0.0', port=5000):
     global video_looper
     video_looper = looper
     app.run(host=host, port=port)
+
+
+if __name__ == '__main__':
+    print('Starting Dummy Video Looper for testing.')
+    dummy_looper = DummyVideoLooper()
+    run_flask(dummy_looper, host='127.0.0.1', port=5000)
