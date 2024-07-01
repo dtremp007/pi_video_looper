@@ -19,15 +19,17 @@ def get_first_available_usb_drive():
     return None
 
 
-@ app.route('/')
+@app.route('/')
 def index():
     return send_from_directory(app.static_folder, 'index.html')
 
-@ app.route('/<path:path>')
+
+@app.route('/<path:path>')
 def send_static(path):
     return send_from_directory(app.static_folder, path)
 
-@ app.route('/api/play')
+
+@app.post('/api/play')
 def play():
     video_looper._playbackStopped = False
     movie = video_looper._playlist.get_next(
@@ -37,27 +39,27 @@ def play():
     return jsonify({"status": "playing"})
 
 
-@ app.route('/api/pause')
+@app.post('/api/pause')
 def pause():
     video_looper._player.pause()
     return jsonify({"status": "paused"})
 
 
-@ app.route('/api/stop')
+@app.post('/api/stop')
 def stop():
     video_looper._playbackStopped = True
     video_looper._player.stop(3)
     return jsonify({"status": "stopped"})
 
 
-@ app.route('/api/next')
+@app.post('/api/next')
 def next_video():
     video_looper._playlist.seek(1)
     video_looper._player.stop(3)
     return jsonify({"status": "next video"})
 
 
-@ app.route('/api/queue', methods=['POST'])
+@app.route('/api/queue', methods=['POST'])
 def queue_video():
     video_path = request.json['path']
     video_looper._playlist.add(
@@ -65,50 +67,71 @@ def queue_video():
     return jsonify({"status": "video queued"})
 
 
-@ app.route('/upload', methods=['GET', 'POST'])
+@app.post('/api/upload')
 def upload_file():
-    if request.method == 'POST':
-        # Check if the post request has the file part
-        if 'file' not in request.files:
-            return redirect(request.url)
-        file = request.files['file']
-        # If the user does not select a file, the browser submits an empty file without a filename
-        if file.filename == '':
-            return redirect(request.url)
-        if file:
-            filename = secure_filename(file.filename)
-            usb_drive_path = get_first_available_usb_drive()
-            if not usb_drive_path:
-                return jsonify({"status": "error", "message": "No USB drive found"}), 500
+    # Check if the post request has the file part
+    if 'file' not in request.files:
+        return redirect(request.url)
+    file = request.files['file']
+    # If the user does not select a file, the browser submits an empty file without a filename
+    if file.filename == '':
+        return redirect(request.url)
+    if file:
+        filename = secure_filename(file.filename)
+        usb_drive_path = get_first_available_usb_drive()
+        if not usb_drive_path:
+            return jsonify({"status": "error", "message": "No USB drive found"}), 500
 
-            file_path = os.path.join(usb_drive_path, filename)
-            try:
-                # Save the file to the USB drive
-                file.save(file_path)
+        file_path = os.path.join(usb_drive_path, filename)
+        try:
+            # Save the file to the USB drive
+            file.save(file_path)
 
-                # Get the current list of movies
-                current_movies = video_looper._playlist._movies
+            # Get the current list of movies
+            current_movies = video_looper._playlist._movies
 
-                # Add the new movie to the list
-                new_movie = Movie(file_path, filename, 1)
-                current_movies.append(new_movie)
+            # Add the new movie to the list
+            new_movie = Movie(file_path, filename, 1)
+            current_movies.append(new_movie)
 
-                # Recreate the playlist with the updated list of movies
-                video_looper._playlist = Playlist(current_movies)
+            # Recreate the playlist with the updated list of movies
+            video_looper._playlist = Playlist(current_movies)
 
-                return redirect(url_for('index'))
-            except Exception as e:
-                app.logger.error(f"Error saving file: {e}")
-                return jsonify({"status": "error", "message": str(e)}), 500
-    return '''
-    <!doctype html>
-    <title>Upload new Video</title>
-    <h1>Upload new Video</h1>
-    <form method=post enctype=multipart/form-data>
-      <input type=file name=file>
-      <input type=submit value=Upload>
-    </form>
-    '''
+            return redirect(url_for('index'))
+        except Exception as e:
+            app.logger.error(f"Error saving file: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.get('/api/current_video')
+def current_video():
+    current_index = video_looper._playlist._index
+    current_movie = video_looper._playlist._movies[current_index]
+    return jsonify({
+        "target": current_movie.target,
+        "title": current_movie.title,
+        "repeats": current_movie.repeats,
+        "playcount": current_movie.playcount
+    })
+
+
+@app.get('/api/playlist')
+def get_playlist():
+    playlist = [{
+        "target": movie.target,
+        "title": movie.title,
+        "repeats": movie.repeats,
+        "playcount": movie.playcount
+    } for movie in video_looper._playlist._movies]
+    return jsonify(playlist)
+
+
+@app.route('/api/remove_video', methods=['POST'])
+def remove_video():
+    video_path = request.json['path']
+    video_looper._playlist._movies = [
+        movie for movie in video_looper._playlist._movies if movie.target != video_path]
+    return jsonify({"status": "video removed"})
 
 
 def run_flask(looper, host='0.0.0.0', port=5000):
