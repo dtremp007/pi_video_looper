@@ -117,8 +117,8 @@ def run_flask(looper, host='0.0.0.0', port=5000):
     app.run(host=host, port=port)
 
 
-if __name__ == '__main__':
-    from dummy_video_looper import DummyVideoLooper
-    print('Starting Dummy Video Looper for testing.')
-    dummy_looper = DummyVideoLooper()
-    run_flask(dummy_looper, host='127.0.0.1', port=5000)
+# if __name__ == '__main__':
+#     from dummy_video_looper import DummyVideoLooper
+#     print('Starting Dummy Video Looper for testing.')
+#     dummy_looper = DummyVideoLooper()
+#     run_flask(dummy_looper, host='127.0.0.1', port=5000)
