@@ -1,11 +1,15 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 from Adafruit_Video_Looper.model import Movie, Playlist
+from flask_cors import CORS
 import os
 
 app = Flask(__name__, template_folder=os.path.join(
     os.path.dirname(__file__), 'templates'),
-    static_folder=os.path.join(os.path.dirname(__file__), 'static'))
+    static_folder=os.path.join(os.path.dirname(__file__), 'static')
+    )
+
+CORS(app)
 
 # This will be set from the main script
 video_looper = None
@@ -121,8 +125,8 @@ def get_playlist():
         "target": movie.target,
         "title": movie.title,
         "repeats": movie.repeats,
-        "playcount": movie.playcount
-    } for movie in video_looper._playlist._movies]
+        "playcount": movie.playcount,
+    } for movie, index in video_looper._playlist._movies]
     return jsonify(playlist)
 
 
@@ -132,6 +136,34 @@ def remove_video():
     video_looper._playlist._movies = [
         movie for movie in video_looper._playlist._movies if movie.target != video_path]
     return jsonify({"status": "video removed"})
+
+
+@app.post('/api/update')
+def update_application():
+    # Authentication check (implement your own authentication mechanism)
+    # if not request.headers.get('Authorization') == 'Bearer your_secret_token':
+    #     return jsonify({"status": "Unauthorized"}), 401
+
+    try:
+        # Trigger the update script asynchronously
+        script_path = os.path.expanduser('~/update_script.sh')
+        subprocess.Popen(['/bin/sh', script_path])
+
+        # Respond immediately to the client
+        response = jsonify({"status": "Update started"})
+        response.status_code = 202  # Accepted
+        return response
+
+    except Exception as e:
+        return jsonify({"status": "Error", "message": str(e)}), 500
+    finally:
+        # Exit the Flask application
+        os._exit(0)
+
+
+@app.route('/healthcheck')
+def healthcheck():
+    return jsonify({"status": "healthy"})
 
 
 def run_flask(looper, host='0.0.0.0', port=5000):
