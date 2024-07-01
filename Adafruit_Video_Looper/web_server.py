@@ -33,7 +33,7 @@ def send_static(path):
     return send_from_directory(app.static_folder, path)
 
 
-@app.post('/api/play')
+@app.route('/api/play', methods=['POST'])
 def play():
     video_looper._playbackStopped = False
     movie = video_looper._playlist.get_next(
@@ -43,35 +43,27 @@ def play():
     return jsonify({"status": "playing"})
 
 
-@app.post('/api/pause')
+@app.route('/api/pause', methods=['POST'])
 def pause():
     video_looper._player.pause()
     return jsonify({"status": "paused"})
 
 
-@app.post('/api/stop')
+@app.route('/api/stop', methods=['POST'])
 def stop():
     video_looper._playbackStopped = True
     video_looper._player.stop(3)
     return jsonify({"status": "stopped"})
 
 
-@app.post('/api/next')
+@app.route('/api/next', methods=['POST'])
 def next_video():
     video_looper._playlist.seek(1)
     video_looper._player.stop(3)
     return jsonify({"status": "next video"})
 
 
-@app.route('/api/queue', methods=['POST'])
-def queue_video():
-    video_path = request.json['path']
-    video_looper._playlist.add(
-        Movie(video_path, os.path.basename(video_path), 1))
-    return jsonify({"status": "video queued"})
-
-
-@app.post('/api/upload')
+@app.route('/api/upload', methods=['POST'])
 def upload_file():
     # Check if the post request has the file part
     if 'file' not in request.files:
@@ -107,7 +99,7 @@ def upload_file():
             return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.get('/api/current_video')
+@app.route('/api/current_video')
 def current_video():
     current_index = video_looper._playlist._index
     current_movie = video_looper._playlist._movies[current_index]
@@ -119,7 +111,7 @@ def current_video():
     })
 
 
-@app.get('/api/playlist')
+@app.route('/api/playlist')
 def get_playlist():
     playlist = [{
         "target": movie.target,
@@ -138,7 +130,7 @@ def remove_video():
     return jsonify({"status": "video removed"})
 
 
-@app.post('/api/update')
+@app.route('/api/update', methods=['POST'])
 def update_application():
     # Authentication check (implement your own authentication mechanism)
     # if not request.headers.get('Authorization') == 'Bearer your_secret_token':

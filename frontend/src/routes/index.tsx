@@ -9,7 +9,7 @@ export default function Index() {
       <div class="flex flex-col items-center">
         <Updater />
       </div>
-      <div class="flex justify-center items-center h-screen">
+      <div class="flex flex-col gap-4 justify-center items-center h-screen">
         <CurrentVideo />
         <VideoController />
       </div>
