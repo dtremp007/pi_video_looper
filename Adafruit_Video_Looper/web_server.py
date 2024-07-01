@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
-from dummy_video_looper import DummyVideoLooper
-from model import Movie, Playlist
+from Adafruit_Video_Looper.model import Movie, Playlist
 import os
 
 app = Flask(__name__, template_folder=os.path.join(
@@ -119,6 +118,7 @@ def run_flask(looper, host='0.0.0.0', port=5000):
 
 
 if __name__ == '__main__':
+    from dummy_video_looper import DummyVideoLooper
     print('Starting Dummy Video Looper for testing.')
     dummy_looper = DummyVideoLooper()
     run_flask(dummy_looper, host='127.0.0.1', port=5000)
